@@ -4,7 +4,11 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <limits.h>
+#include "prompt.h"
+#include "lexer.h"
+#include "parser.h"
 
+char prompt[10000];
 
 int main(){
     char *buf1 = "<tanush@iiit:";
@@ -33,15 +37,17 @@ int main(){
         }
         fflush(stdout);
 
-        char prompt[10000];
+        
         if(fgets(prompt, sizeof(prompt), stdin) != NULL){
             prompt[strcspn(prompt, "\n")] = '\0';
-            printf("%s", prompt);
+            int length = strlen(prompt);
+            if(func(length)){
+                parse();
+            }
         }else{
             printf("\n");
             break;
         }
-        printf("\n");
     }
 
 
