@@ -119,10 +119,6 @@ int func(int string_length){
         tokens[j++]=strdup(word_buf);
     }
     tokens[j] = NULL;
-    for(int k = 0;k<j;k++) {
-        printf("[%s] ",tokens[k]);
-    }
-    printf("\n");
 
     return 1;
 }

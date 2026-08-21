@@ -8,6 +8,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "command.h"
+#include "builtins.h"
 
 char prompt[10000];
 
@@ -45,6 +46,12 @@ int main(){
             if(func(length)){
                 if(parse()==1){
                     Command *cmds = build_commands(0);
+
+                    if(cmds!=NULL){
+                        if(cmds->argc >= 1 && strcmp(cmds->argv[0], "locate")==0){
+                            builtin_locate(cmds);
+                        }
+                    }
                     free_commands(cmds);
                 }
             }
