@@ -1,0 +1,7 @@
+cat > .gitignore << 'EOF'
+*.o
+shell.out
+shell
+y
+.cshell_frecency
+EOF

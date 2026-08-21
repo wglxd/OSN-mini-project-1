@@ -10,16 +10,20 @@
 #include "command.h"
 #include "builtins.h"
 
+
 char prompt[10000];
+char home_dir[PATH_MAX];
+char prev_dir[PATH_MAX];
 
 int main(){
     char *buf1 = "<tanush@iiit:";
-    char hd[PATH_MAX];
 
-    if(getcwd(hd, sizeof(hd))==NULL){
+    if(getcwd(home_dir, sizeof(home_dir))==NULL){
         printf("Failed to fetch the home directory!\n");
         return 1;
     }
+    frec_load();
+    prev_dir[0] = '\0';
 
     while(1){
         char pwd[PATH_MAX];
@@ -28,8 +32,8 @@ int main(){
             return 1;
         }
 
-        int hlen = (int)strlen(hd);
-        if(strncmp(pwd, hd, hlen) == 0 && (pwd[hlen] == '/' || pwd[hlen] == '\0')){
+        int hlen = (int)strlen(home_dir);
+        if(strncmp(pwd, home_dir, hlen) == 0 && (pwd[hlen] == '/' || pwd[hlen] == '\0')){
             char *new_pwd = pwd + hlen;
             printf("%s~", buf1);
             printf("%s> ", new_pwd);
@@ -50,6 +54,10 @@ int main(){
                     if(cmds!=NULL){
                         if(cmds->argc >= 1 && strcmp(cmds->argv[0], "locate")==0){
                             builtin_locate(cmds);
+                        }else if(cmds->argc >= 1 && strcmp(cmds->argv[0], "hop")==0){
+                            builtin_hop(cmds);
+                        }else if(cmds->argc >= 1 && strcmp(cmds->argv[0], "reveal")==0){
+                            builtin_reveal(cmds);
                         }
                     }
                     free_commands(cmds);
@@ -61,6 +69,6 @@ int main(){
         }
     }
 
-
     return 0;
 }
+
