@@ -7,6 +7,7 @@
 #include "prompt.h"
 #include "lexer.h"
 #include "parser.h"
+#include "command.h"
 
 char prompt[10000];
 
@@ -42,7 +43,10 @@ int main(){
             prompt[strcspn(prompt, "\n")] = '\0';
             int length = strlen(prompt);
             if(func(length)){
-                parse();
+                if(parse()==1){
+                    Command *cmds = build_commands(0);
+                    free_commands(cmds);
+                }
             }
         }else{
             printf("\n");
