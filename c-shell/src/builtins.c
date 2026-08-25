@@ -12,6 +12,7 @@
 
 
 #define MAX_ENTRIES 1000
+#define MAX_LINES 10000
 
 typedef struct{
     char path[PATH_MAX];
@@ -226,7 +227,6 @@ int builtin_hop(Command *cmd){
             }
         }
     }
-
     return 0;
 }
 
@@ -273,10 +273,25 @@ static void list_dir(const char *path, const char *prefix, int show_hidden, int 
         char full[PATH_MAX*2];
         snprintf(full, sizeof(full), "%s/%s", path, names[i]);
 
-        if(prefix[0] == '\0'){
-            printf("%s\n", names[i]);
+        if(recursive == 1 && is_dir(full) == 1){
+            if(prefix[0] == '\0'){
+                printf("%s/\n", names[i]);
+            }else{
+                printf("%s/%s/\n", prefix, names[i]);
+            }
+            char newprefix[PATH_MAX*2];
+            if(prefix[0] == '\0'){
+                snprintf(newprefix, sizeof(newprefix), "%s", names[i]);
+            }else{
+                snprintf(newprefix, sizeof(newprefix), "%s/%s", prefix, names[i]);
+            }
+            list_dir(full, newprefix, show_hidden, recursive);
         }else{
-            printf("%s/%s\n", prefix, names[i]);
+            if(prefix[0] == '\0'){
+                printf("%s\n", names[i]);
+            }else{
+                printf("%s/%s\n", prefix, names[i]);
+            }
         }
 
         free(names[i]);
@@ -336,5 +351,121 @@ int builtin_reveal(Command *cmd){
 
     list_dir(resolved, "", show_hidden, recursive);
     return 0;
+}
+
+
+static void peek_one(const char *name, int number, int reverse){
+    FILE *f;
+
+    if(strcmp(name,"-") == 0){
+        f = stdin;
+    }else{
+        struct stat st;
+        if(stat(name, &st) != 0){
+            printf("peek: no such file or directory\n");
+            return;
+        }
+        if(S_ISDIR(st.st_mode)){
+            printf("peek: is a directory\n");
+            return;
+        }
+        f = fopen(name, "r");
+        if(f == NULL){
+            printf("peek: no such file or directory\n");
+            return;
+        }
+    }
+
+    char *lines[MAX_LINES];
+    int nlines = 0;
+    char buf[8192];
+
+    while(fgets(buf, sizeof(buf), f) != NULL && nlines < MAX_LINES){
+        lines[nlines] = strdup(buf);
+        nlines++;
+    }
+
+    if(f!=stdin){
+        fclose(f);
+    }
+
+    if(reverse == 0 && number == 0){
+        for(int i = 0; i < nlines; i++){
+            printf("%s", lines[i]);
+        }
+    }else if(reverse == 0 && number == 1){
+        int counter = 1;
+        for(int i = 0; i < nlines; i++){
+            if(lines[i][0] != '\n' && lines[i][0] != '\0'){
+                printf("%d %s", counter, lines[i]);
+                counter++;
+            }else{
+                printf("%s", lines[i]);
+            }
+        }
+    }else if(reverse == 1 && number == 0){
+        for(int i = nlines-1; i >= 0; i--){
+            printf("%s", lines[i]);
+        }
+    }else{
+        int nums[MAX_LINES];
+        int counter = 1;
+        for(int i = 0; i < nlines; i++){
+            if(lines[i][0] != '\n' && lines[i][0] != '\0'){
+                nums[i] = counter;
+                counter++;
+            }else{
+                nums[i] = 0;
+            }
+        }
+        for(int i = nlines-1; i >= 0; i--){
+            if(nums[i] > 0){
+                printf("%d %s", nums[i], lines[i]);
+            }else{
+                printf("%s", lines[i]);
+            }
+        }
+    }
+
+    for(int i = 0; i < nlines; i++){
+        free(lines[i]);
+    }
+}
+
+int builtin_peek(Command *cmd){
+    int number = 0;
+    int reverse = 0;
+    char *files[256];
+    int nfiles = 0;
+
+    for(int k = 1;k<=cmd->argc-1; k++){
+        char *arg = cmd->argv[k];
+        if(strcmp(arg,"-") == 0){
+            files[nfiles] = arg;
+            nfiles++;
+        }else if(arg[0] == '-'){
+            for(int c = 1;arg[c]!='\0';c++){
+                if(arg[c] == 'n'){
+                    number = 1;
+                }else if(arg[c]=='r'){
+                    reverse = 1;
+                }else{
+                    printf("peek: invalid syntax\n");
+                    return 0;
+                }
+            }
+        }else{
+            files[nfiles] = arg;
+            nfiles++;
+        }
+    }
+    if(nfiles == 0){
+        peek_one("-", number, reverse);
+    }else{
+        for(int i = 0;i<nfiles;i++){
+            peek_one(files[i], number,reverse);
+        }
+    }
+
     return 0;
 }

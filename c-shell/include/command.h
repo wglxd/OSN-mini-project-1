@@ -5,9 +5,11 @@
 typedef struct Command{
     char **argv;  
     int argc;
-    char *infile;  // For redirection purposes
-    char *outfile;
-    int append; // Distinguishes > from >>
+    char *infiles[64];  // For redirection purposes
+    char *outfiles[64];
+    int outappend[64]; // Distinguishes < from <<
+    int n_infiles;
+    int n_outfiles;
     int background;  
     int piped_to_next;  // For piping processes
     struct Command *next;

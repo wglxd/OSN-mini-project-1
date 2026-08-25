@@ -7,6 +7,7 @@
 extern char home_dir[PATH_MAX];
 extern char prev_dir[PATH_MAX];
 
+
 extern char prompt[10000];
 
 

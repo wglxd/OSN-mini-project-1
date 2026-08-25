@@ -16,9 +16,8 @@ static Command *new_command(void){
     head->argc = 0;
     head->argv = (char**)(malloc(256*sizeof(char*)));
     head->argv[0] = NULL;
-    head->infile  = NULL;
-    head->outfile = NULL;
-    head->append = 0;
+    head->n_infiles = 0;
+    head->n_outfiles = 0;
     head->piped_to_next = 0;
     head->background = 0;
     head->next = NULL;
@@ -31,16 +30,18 @@ Command *build_commands(int index){
     }
     Command *head = new_command();
     int i = index;
+    int append_mode = 0;
     int pending = 0;
     while(tokens[i] != NULL){
         if(tok_is_op[i]==0){  // If the token is not an operator, then we must add it to arguments of the command
             if(pending == 1){
-                free(head->infile);
-                head->infile = strdup(tokens[i]);
+                head->infiles[head->n_infiles] = strdup(tokens[i]);
+                head->n_infiles++;
                 pending = 0;
             }else if(pending == 2){
-                free(head->outfile);
-                head->outfile = strdup(tokens[i]);
+                head->outfiles[head->n_outfiles] = strdup(tokens[i]);
+                head->outappend[head->n_outfiles] = append_mode;
+                head->n_outfiles++;
                 pending = 0;
             }else{
                 head->argv[head->argc] = strdup(tokens[i]);
@@ -54,11 +55,11 @@ Command *build_commands(int index){
                 break;
             }else if(strcmp(tokens[i], ">")==0){
                 pending = 2;
-                head->append = 0;
+                append_mode = 0;
                 i++;
             }else if(strcmp(tokens[i], ">>")==0){
                 pending = 2;
-                head->append = 1;
+                append_mode = 1;
                 i++;
             }else if(strcmp(tokens[i], "&")==0){
                 head->background = 1;
@@ -88,8 +89,12 @@ void free_commands(Command *head){
             free(temp->argv[i]);
         }
         free(temp->argv);
-        free(temp->infile);
-        free(temp->outfile);
+        for(int i = 0;i<temp->n_infiles;i++){
+            free(temp->infiles[i]);
+        }
+        for(int i = 0;i<temp->n_outfiles;i++){
+            free(temp->outfiles[i]);
+        }
         free(temp);
         temp = head;
     }
@@ -98,8 +103,12 @@ void free_commands(Command *head){
         free(head->argv[i]);
     }
     free(head->argv);
-    free(head->infile);
-    free(head->outfile);
+        for(int i = 0;i<temp->n_infiles;i++){
+            free(temp->infiles[i]);
+        }
+        for(int i = 0;i<temp->n_outfiles;i++){
+            free(temp->outfiles[i]);
+        }
     free(head);
     return;
 }

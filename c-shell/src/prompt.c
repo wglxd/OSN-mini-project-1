@@ -9,6 +9,7 @@
 #include "parser.h"
 #include "command.h"
 #include "builtins.h"
+#include "exec.h"
 
 
 char prompt[10000];
@@ -16,7 +17,20 @@ char home_dir[PATH_MAX];
 char prev_dir[PATH_MAX];
 
 int main(){
-    char *buf1 = "<tanush@iiit:";
+    char username[256];
+    char host[256];
+
+    if(getlogin_r(username, sizeof(username)) != 0){
+        char *e = getenv("USER");
+        if(e != NULL){
+            snprintf(username, sizeof(username), "%s", e);
+        }else{
+            snprintf(username, sizeof(username), "user");
+        }
+    }
+    if(gethostname(host, sizeof(host)) != 0){
+        snprintf(host, sizeof(host), "host");
+    }
 
     if(getcwd(home_dir, sizeof(home_dir))==NULL){
         printf("Failed to fetch the home directory!\n");
@@ -35,15 +49,12 @@ int main(){
         int hlen = (int)strlen(home_dir);
         if(strncmp(pwd, home_dir, hlen) == 0 && (pwd[hlen] == '/' || pwd[hlen] == '\0')){
             char *new_pwd = pwd + hlen;
-            printf("%s~", buf1);
-            printf("%s> ", new_pwd);
+            printf("<%s@%s:~%s> ", username, host, new_pwd);
         }else{
-            printf("%s", buf1);
-            printf("%s> ", pwd);
+            printf("<%s@%s:%s> ", username, host, pwd);
         }
         fflush(stdout);
 
-        
         if(fgets(prompt, sizeof(prompt), stdin) != NULL){
             prompt[strcspn(prompt, "\n")] = '\0';
             int length = strlen(prompt);
@@ -58,6 +69,10 @@ int main(){
                             builtin_hop(cmds);
                         }else if(cmds->argc >= 1 && strcmp(cmds->argv[0], "reveal")==0){
                             builtin_reveal(cmds);
+                        }else if(cmds->argc >= 1 && strcmp(cmds->argv[0], "peek")==0){
+                            builtin_peek(cmds);
+                        }else{
+                            run_pipeline(cmds);
                         }
                     }
                     free_commands(cmds);
@@ -71,4 +86,3 @@ int main(){
 
     return 0;
 }
-
