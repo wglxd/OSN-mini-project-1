@@ -3,7 +3,7 @@
 
 #include "command.h"
 
-void run_command(Command *cmd);
-void run_pipeline(Command *head);
+int run_command(Command *cmd);
+int run_pipeline(Command *head);
 
 #endif /* EXEC_H */

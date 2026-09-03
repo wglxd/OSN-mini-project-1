@@ -8,6 +8,7 @@
 #include "command.h"
 #include "exec.h"
 #include <fcntl.h>
+#include <signal.h>
 
 static int is_executable(const char *path){
     struct stat st;
@@ -183,7 +184,7 @@ static int setup_output(Command *cmd, int *outfd){
 }
 
 
-void run_command(Command *cmd){
+int run_command(Command *cmd){
     char path[PATH_MAX*2];
 
     if(resolve_command(cmd->argv[0], path, sizeof(path))==0){
@@ -192,11 +193,11 @@ void run_command(Command *cmd){
             shown++;
         }
         printf("cshell: command not found (%s)\n", shown);
-        return;
+        return 0;
     }
         int infd = 0;
     if(setup_input(cmd, &infd) == 0){
-        return;
+        return 0;
     }
 
     int outfd = 0;
@@ -204,7 +205,7 @@ void run_command(Command *cmd){
         if(infd >= 0){
             close(infd);
         }
-        return;
+        return 0;
     }
 
     pid_t pid = fork();
@@ -229,11 +230,64 @@ void run_command(Command *cmd){
         int status;
         waitpid(pid, &status, 0);
     }
+    return 1;
+}
+
+int bg_run_command(Command *cmd){
+    char path[PATH_MAX*2];
+
+    if(resolve_command(cmd->argv[0], path, sizeof(path))==0){
+        const char *shown = cmd->argv[0];
+        if(shown[0] == '%'){
+            shown++;
+        }
+        printf("cshell: command not found (%s)\n", shown);
+        return 0;
+    }
+    int infd = 0;
+    if(setup_input(cmd, &infd) == 0){
+        return 0;
+    }
+
+    int outfd = 0;
+    if(setup_output(cmd, &outfd) == 0){
+        if(infd >= 0){
+            close(infd);
+        }
+        return 0;
+    }
+
+    pid_t pid = fork();
+    if(pid == 0){
+        if(infd >= 0){
+            dup2(infd, STDIN_FILENO);
+            close(infd);
+        }
+        if(outfd >= 0){
+            dup2(outfd, STDOUT_FILENO);
+            close(outfd);
+        }
+        execv(path, cmd->argv);
+        _exit(1);
+    }else if(pid > 0){
+        if(infd >= 0){
+            close(infd);
+        }
+        if(outfd >= 0){
+            close(outfd);
+        }
+        int status;
+        
+    }
+    return 1;
 }
 
 
 
-void run_pipeline(Command *head){
+
+
+
+int run_pipeline(Command *head){
     int count = 1;
     Command *c = head;
     while(c->piped_to_next==1 && c->next!=NULL){
@@ -242,14 +296,13 @@ void run_pipeline(Command *head){
     }
 
     if(count == 1){
-        run_command(head);
-        return;
+        return run_command(head);
     }
 
     int pipes[count-1][2];
     for(int i = 0;i<count-1;i++){
         if(pipe(pipes[i]) < 0){
-            return;
+            return 0;
         }
     }
 
@@ -307,8 +360,13 @@ void run_pipeline(Command *head){
         close(pipes[j][1]);
     }
 
+    int ok = 1;
     for(int i = 0;i<count;i++){
         int status = 0;
         waitpid(pids[i], &status, 0);
+        if(WIFEXITED(status) == 0 || WEXITSTATUS(status)!=0){
+            ok = 0;
+        }
     }
+    return ok;
 }

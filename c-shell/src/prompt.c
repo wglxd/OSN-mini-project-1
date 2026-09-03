@@ -61,18 +61,35 @@ int main(){
             if(func(length)){
                 if(parse()==1){
                     Command *cmds = build_commands(0);
+                    Command *groups = cmds;
 
-                    if(cmds!=NULL){
-                        if(cmds->argc >= 1 && strcmp(cmds->argv[0], "locate")==0){
-                            builtin_locate(cmds);
-                        }else if(cmds->argc >= 1 && strcmp(cmds->argv[0], "hop")==0){
-                            builtin_hop(cmds);
-                        }else if(cmds->argc >= 1 && strcmp(cmds->argv[0], "reveal")==0){
-                            builtin_reveal(cmds);
-                        }else if(cmds->argc >= 1 && strcmp(cmds->argv[0], "peek")==0){
-                            builtin_peek(cmds);
+
+                    while(groups!=NULL){
+                        int ok = 1;
+
+                        if(groups->argc >= 1 && strcmp(groups->argv[0], "locate")==0){
+                            builtin_locate(groups);
+                        }else if(groups->argc >= 1 && strcmp(groups->argv[0], "hop")==0){
+                            builtin_hop(groups);
+                        }else if(groups->argc >= 1 && strcmp(groups->argv[0], "reveal")==0){
+                            builtin_reveal(groups);
+                        }else if(groups->argc >= 1 && strcmp(groups->argv[0], "peek")==0){
+                            builtin_peek(groups);
                         }else{
-                            run_pipeline(cmds);
+                            ok = run_pipeline(groups);
+                        }
+
+                        Command *last = groups;
+                        while(last->piped_to_next == 1 && last->next != NULL){
+                            last = last->next;
+                        }
+                        int was_bg = last->background;
+                        groups = last->next;
+
+                        if(was_bg==0 && ok==0){
+                            break;
+                        }else if(was_bg == 1){
+                            
                         }
                     }
                     free_commands(cmds);
